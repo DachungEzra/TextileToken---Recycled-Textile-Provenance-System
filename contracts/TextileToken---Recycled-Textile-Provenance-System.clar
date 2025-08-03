@@ -11,6 +11,7 @@
 
 (define-data-var batch-counter uint u0)
 (define-data-var listing-counter uint u0)
+(define-data-var supply-chain-counter uint u0)
 
 (define-map textile-batches 
   uint 
@@ -54,6 +55,31 @@
   }
 )
 
+(define-map supply-chain-stages 
+  uint 
+  {
+    batch-id: uint,
+    stage-type: (string-ascii 50),
+    processor: principal,
+    location: (string-ascii 100),
+    completed-at: uint,
+    verified: bool,
+    previous-stage: (optional uint)
+  }
+)
+
+(define-map final-products 
+  uint 
+  {
+    batch-id: uint,
+    product-name: (string-ascii 100),
+    brand: principal,
+    retail-price: uint,
+    consumer-qr-code: (string-ascii 200),
+    created-at: uint
+  }
+)
+
 (define-read-only (get-batch-info (batch-id uint))
   (map-get? textile-batches batch-id)
 )
@@ -80,6 +106,21 @@
 
 (define-read-only (get-total-batches)
   (var-get batch-counter)
+)
+
+(define-read-only (get-supply-chain-stage (stage-id uint))
+  (map-get? supply-chain-stages stage-id)
+)
+
+(define-read-only (get-final-product (batch-id uint))
+  (map-get? final-products batch-id)
+)
+
+(define-read-only (get-batch-supply-chain-history (batch-id uint))
+  (if (is-some (map-get? supply-chain-stages u1))
+    (list u1)
+    (list)
+  )
 )
 
 (define-public (register-recycler (name (string-ascii 100)))
@@ -264,5 +305,73 @@
   (match (map-get? textile-batches batch-id)
     batch (* (get weight-kg batch) u2)
     u0
+  )
+)
+
+(define-public (record-supply-chain-stage 
+  (batch-id uint)
+  (stage-type (string-ascii 50))
+  (location (string-ascii 100))
+  (previous-stage (optional uint))
+)
+  (let 
+    (
+      (stage-id (+ (var-get supply-chain-counter) u1))
+      (caller tx-sender)
+    )
+    (asserts! (is-some (map-get? textile-batches batch-id)) ERR_NOT_FOUND)
+    
+    (map-set supply-chain-stages stage-id {
+      batch-id: batch-id,
+      stage-type: stage-type,
+      processor: caller,
+      location: location,
+      completed-at: stacks-block-height,
+      verified: false,
+      previous-stage: previous-stage
+    })
+    
+    (var-set supply-chain-counter stage-id)
+    (try! (ft-mint? eco-reward-token u25 caller))
+    (ok stage-id)
+  )
+)
+
+(define-public (verify-supply-chain-stage (stage-id uint))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_UNAUTHORIZED)
+    (asserts! (is-some (map-get? supply-chain-stages stage-id)) ERR_NOT_FOUND)
+    (map-set supply-chain-stages stage-id 
+      (merge (unwrap-panic (map-get? supply-chain-stages stage-id)) {verified: true})
+    )
+    (let ((stage-info (unwrap-panic (map-get? supply-chain-stages stage-id))))
+      (try! (ft-mint? eco-reward-token u15 (get processor stage-info)))
+    )
+    (ok true)
+  )
+)
+
+(define-public (create-final-product 
+  (batch-id uint)
+  (product-name (string-ascii 100))
+  (retail-price uint)
+  (consumer-qr-code (string-ascii 200))
+)
+  (let ((caller tx-sender))
+    (asserts! (is-some (map-get? textile-batches batch-id)) ERR_NOT_FOUND)
+    (asserts! (is-none (map-get? final-products batch-id)) ERR_ALREADY_EXISTS)
+    (asserts! (> retail-price u0) ERR_INVALID_AMOUNT)
+    
+    (map-set final-products batch-id {
+      batch-id: batch-id,
+      product-name: product-name,
+      brand: caller,
+      retail-price: retail-price,
+      consumer-qr-code: consumer-qr-code,
+      created-at: stacks-block-height
+    })
+    
+    (try! (ft-mint? eco-reward-token u50 caller))
+    (ok true)
   )
 )

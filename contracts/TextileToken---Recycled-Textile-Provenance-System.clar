@@ -351,7 +351,7 @@
   )
 )
 
-(define-public (create-final-product 
+(define-public (create-final-product
   (batch-id uint)
   (product-name (string-ascii 100))
   (retail-price uint)
@@ -361,7 +361,7 @@
     (asserts! (is-some (map-get? textile-batches batch-id)) ERR_NOT_FOUND)
     (asserts! (is-none (map-get? final-products batch-id)) ERR_ALREADY_EXISTS)
     (asserts! (> retail-price u0) ERR_INVALID_AMOUNT)
-    
+
     (map-set final-products batch-id {
       batch-id: batch-id,
       product-name: product-name,
@@ -370,8 +370,52 @@
       consumer-qr-code: consumer-qr-code,
       created-at: stacks-block-height
     })
-    
+
     (try! (ft-mint? eco-reward-token u50 caller))
     (ok true)
+  )
+)
+
+(define-constant STAKING_REWARD_RATE u1)
+
+(define-map staking-info
+  principal
+  {
+    amount: uint,
+    staked-at: uint
+  }
+)
+
+(define-read-only (get-staked-amount (account principal))
+  (default-to u0 (get amount (map-get? staking-info account)))
+)
+
+(define-public (stake-eco-tokens (amount uint))
+  (let ((caller tx-sender))
+    (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+    (asserts! (>= (ft-get-balance eco-reward-token caller) amount) ERR_INSUFFICIENT_BALANCE)
+    (try! (ft-transfer? eco-reward-token amount caller (as-contract tx-sender)))
+    (map-set staking-info caller {
+      amount: amount,
+      staked-at: stacks-block-height
+    })
+    (ok true)
+  )
+)
+
+(define-public (unstake-eco-tokens)
+  (let
+    (
+      (caller tx-sender)
+      (stake-info (unwrap! (map-get? staking-info caller) ERR_NOT_FOUND))
+      (staked-amount (get amount stake-info))
+      (staked-at (get staked-at stake-info))
+      (blocks-staked (- stacks-block-height staked-at))
+      (rewards (* staked-amount blocks-staked STAKING_REWARD_RATE))
+    )
+    (try! (as-contract (ft-transfer? eco-reward-token staked-amount tx-sender caller)))
+    (try! (ft-mint? eco-reward-token rewards caller))
+    (map-delete staking-info caller)
+    (ok rewards)
   )
 )

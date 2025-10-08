@@ -5,10 +5,12 @@ TextileToken is a blockchain-based smart contract system built on Stacks that cr
 ## ✨ Key Features
 
 - 🏷️ **Recycled Batch NFTs**: Create unique tokens representing batches of recycled textiles with origin tracking
-- 🌱 **Eco-Reward Tokens**: Earn fungible tokens for verified textile recycling activities  
+- 🌱 **Eco-Reward Tokens**: Earn fungible tokens for verified textile recycling activities
 - 🛒 **Sustainable Marketplace**: Buy and sell recycled textile batches using eco-tokens
 - 🎖️ **Compliance Badges**: Certify manufacturers using verified recycled materials
 - 📊 **Carbon Offset Tracking**: Calculate environmental impact of recycled textiles
+- 🔀 **Batch Splitting**: Divide large textile batches into smaller units for flexible management
+- 🔄 **Batch Merging**: Consolidate multiple textile batches into a single optimized batch
 
 ## 🚀 Getting Started
 
@@ -81,7 +83,23 @@ clarinet test
 (contract-call? .textile-token get-listing-info u1)
 ```
 
-### 👨‍💼 For Contract Owner
+### 🔀 For Batch Management
+
+#### 1. Split Textile Batch
+```clarity
+(contract-call? .textile-token split-batch u1 u50 u50)
+```
+
+This splits batch 1 into two new batches of 50kg each, provided the original batch weighs 100kg and is owned by the caller.
+
+#### 2. Merge Textile Batches
+```clarity
+(contract-call? .textile-token merge-batches (list u1 u2))
+```
+
+This merges batches 1 and 2 into a new consolidated batch, provided they have the same origin and textile type, and are owned by the caller.
+
+### �‍💼 For Contract Owner
 
 #### 1. Certify Recycler
 ```clarity
@@ -115,6 +133,8 @@ clarinet test
 - `buy-batch` - Purchase batch with eco-tokens
 - `transfer-eco-tokens` - Send tokens to another user
 - `burn-eco-tokens` - Remove tokens from circulation
+- `split-batch` - Divide a textile batch into two smaller batches
+- `merge-batches` - Combine multiple textile batches into one consolidated batch
 
 ### Owner Functions
 - `certify-recycler` - Approve recycler certification
@@ -127,6 +147,7 @@ clarinet test
 - **Base Reward**: 10 tokens per kg of recycled textile
 - **Certification Bonus**: Additional 5 tokens per kg for certified batches
 - **Marketplace**: Use tokens to buy/sell recycled textile batches
+- **Merging Reward**: 10 tokens per kg for the total weight of merged batches
 
 ## 🛡️ Security Features
 

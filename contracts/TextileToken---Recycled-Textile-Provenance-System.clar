@@ -13,15 +13,16 @@
 (define-data-var listing-counter uint u0)
 (define-data-var supply-chain-counter uint u0)
 
-(define-map textile-batches 
-  uint 
+(define-map textile-batches
+  uint
   {
     origin: (string-ascii 100),
     textile-type: (string-ascii 50),
     weight-kg: uint,
     recycler: principal,
     created-at: uint,
-    certified: bool
+    certified: bool,
+    split: bool
   }
 )
 
@@ -168,7 +169,8 @@
       weight-kg: weight-kg,
       recycler: caller,
       created-at: stacks-block-height,
-      certified: false
+      certified: false,
+      split: false
     })
     
     (let ((recycler-info (unwrap-panic (map-get? recycler-registry caller))))
@@ -417,5 +419,79 @@
     (try! (ft-mint? eco-reward-token rewards caller))
     (map-delete staking-info caller)
     (ok rewards)
+  )
+)
+
+(define-public (split-batch (batch-id uint) (weight1 uint) (weight2 uint))
+  (let
+    (
+      (caller tx-sender)
+      (batch-info (unwrap! (map-get? textile-batches batch-id) ERR_NOT_FOUND))
+      (original-weight (get weight-kg batch-info))
+      (new-batch-id1 (+ (var-get batch-counter) u1))
+      (new-batch-id2 (+ new-batch-id1 u1))
+    )
+    (asserts! (is-eq (some caller) (nft-get-owner? textile-batch batch-id)) ERR_UNAUTHORIZED)
+    (asserts! (not (get split batch-info)) ERR_INVALID_BATCH)
+    (asserts! (> weight1 u0) ERR_INVALID_AMOUNT)
+    (asserts! (> weight2 u0) ERR_INVALID_AMOUNT)
+    (asserts! (is-eq (+ weight1 weight2) original-weight) ERR_INVALID_AMOUNT)
+    (try! (nft-mint? textile-batch new-batch-id1 caller))
+    (map-set textile-batches new-batch-id1
+      (merge batch-info {
+        weight-kg: weight1,
+        split: false
+      })
+    )
+    (try! (nft-mint? textile-batch new-batch-id2 caller))
+    (map-set textile-batches new-batch-id2
+      (merge batch-info {
+        weight-kg: weight2,
+        split: false
+      })
+    )
+    (map-set textile-batches batch-id
+      (merge batch-info {
+        weight-kg: u0,
+        split: true
+      })
+    )
+    (var-set batch-counter new-batch-id2)
+    (ok (list new-batch-id1 new-batch-id2))
+)
+  )
+(define-public (merge-batches (batch-ids (list 2 uint)))
+  (let
+    (
+      (caller tx-sender)
+      (first-batch-id (unwrap! (element-at batch-ids u0) ERR_INVALID_BATCH))
+      (first-batch (unwrap! (map-get? textile-batches first-batch-id) ERR_NOT_FOUND))
+      (second-batch-id (unwrap! (element-at batch-ids u1) ERR_INVALID_BATCH))
+      (second-batch (unwrap! (map-get? textile-batches second-batch-id) ERR_NOT_FOUND))
+      (total-weight (+ (get weight-kg first-batch) (get weight-kg second-batch)))
+      (new-batch-id (+ (var-get batch-counter) u1))
+    )
+    (asserts! (is-eq (len batch-ids) u2) ERR_INVALID_AMOUNT)
+    (asserts! (is-eq (some caller) (nft-get-owner? textile-batch first-batch-id)) ERR_UNAUTHORIZED)
+    (asserts! (is-eq (some caller) (nft-get-owner? textile-batch second-batch-id)) ERR_UNAUTHORIZED)
+    (asserts! (not (get split first-batch)) ERR_INVALID_BATCH)
+    (asserts! (not (get split second-batch)) ERR_INVALID_BATCH)
+    (asserts! (is-eq (get origin first-batch) (get origin second-batch)) ERR_INVALID_BATCH)
+    (asserts! (is-eq (get textile-type first-batch) (get textile-type second-batch)) ERR_INVALID_BATCH)
+    (try! (nft-mint? textile-batch new-batch-id caller))
+    (map-set textile-batches new-batch-id {
+      origin: (get origin first-batch),
+      textile-type: (get textile-type first-batch),
+      weight-kg: total-weight,
+      recycler: caller,
+      created-at: stacks-block-height,
+      certified: false,
+      split: false
+    })
+    (try! (nft-burn? textile-batch first-batch-id caller))
+    (try! (nft-burn? textile-batch second-batch-id caller))
+    (var-set batch-counter new-batch-id)
+    (try! (ft-mint? eco-reward-token (* total-weight u10) caller))
+    (ok new-batch-id)
   )
 )

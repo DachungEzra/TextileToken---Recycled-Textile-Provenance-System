@@ -495,3 +495,19 @@
     (ok new-batch-id)
   )
 )
+
+(define-data-var total-donations uint u0)
+
+(define-read-only (get-total-donations)
+ (var-get total-donations)
+)
+
+(define-public (donate-eco-tokens (amount uint))
+ (begin
+   (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+   (asserts! (>= (ft-get-balance eco-reward-token tx-sender) amount) ERR_INSUFFICIENT_BALANCE)
+   (try! (ft-transfer? eco-reward-token amount tx-sender (as-contract tx-sender)))
+   (var-set total-donations (+ (var-get total-donations) amount))
+   (ok true)
+ )
+)

@@ -11,6 +11,7 @@ TextileToken is a blockchain-based smart contract system built on Stacks that cr
 - 📊 **Carbon Offset Tracking**: Calculate environmental impact of recycled textiles
 - 🔀 **Batch Splitting**: Divide large textile batches into smaller units for flexible management
 - 🔄 **Batch Merging**: Consolidate multiple textile batches into a single optimized batch
+- 💝 **Eco-Donation System**: Enable users to donate eco-tokens to support environmental initiatives
 
 ## 🚀 Getting Started
 
@@ -99,6 +100,20 @@ This splits batch 1 into two new batches of 50kg each, provided the original bat
 
 This merges batches 1 and 2 into a new consolidated batch, provided they have the same origin and textile type, and are owned by the caller.
 
+### 💝 For Eco-Donations
+
+#### 1. Donate Eco-Tokens
+```clarity
+(contract-call? .textile-token donate-eco-tokens u100)
+```
+
+This allows users to contribute their eco-tokens to support environmental initiatives, with the total donations tracked transparently on-chain.
+
+#### 2. Check Total Donations
+```clarity
+(contract-call? .textile-token get-total-donations)
+```
+
 ### �‍💼 For Contract Owner
 
 #### 1. Certify Recycler
@@ -125,6 +140,7 @@ This merges batches 1 and 2 into a new consolidated batch, provided they have th
 - `is-badge-valid` - Verify badge validity
 - `get-recycler-rating` - Calculate recycler trust score
 - `calculate-carbon-offset` - Estimate environmental impact
+- `get-total-donations` - View total eco-tokens donated to environmental causes
 
 ### Public Functions
 - `register-recycler` - Register as certified recycler
@@ -135,6 +151,7 @@ This merges batches 1 and 2 into a new consolidated batch, provided they have th
 - `burn-eco-tokens` - Remove tokens from circulation
 - `split-batch` - Divide a textile batch into two smaller batches
 - `merge-batches` - Combine multiple textile batches into one consolidated batch
+- `donate-eco-tokens` - Contribute eco-tokens to environmental initiatives
 
 ### Owner Functions
 - `certify-recycler` - Approve recycler certification

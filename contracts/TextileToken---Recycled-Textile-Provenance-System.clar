@@ -5,6 +5,7 @@
 (define-constant ERR_INVALID_AMOUNT (err u400))
 (define-constant ERR_INSUFFICIENT_BALANCE (err u402))
 (define-constant ERR_INVALID_BATCH (err u403))
+(define-constant ROYALTY_PERCENTAGE u5)
 
 (define-fungible-token eco-reward-token)
 (define-non-fungible-token textile-batch uint)
@@ -224,24 +225,29 @@
 )
 
 (define-public (buy-batch (listing-id uint))
-  (let 
+  (let
     (
       (listing (unwrap! (map-get? marketplace-listings listing-id) ERR_NOT_FOUND))
       (buyer tx-sender)
       (seller (get seller listing))
       (batch-id (get batch-id listing))
       (price (get price listing))
+      (batch-info (unwrap! (map-get? textile-batches batch-id) ERR_NOT_FOUND))
+      (original-recycler (get recycler batch-info))
+      (royalty (/ (* price ROYALTY_PERCENTAGE) u100))
+      (seller-amount (- price royalty))
     )
     (asserts! (get active listing) ERR_NOT_FOUND)
     (asserts! (>= (ft-get-balance eco-reward-token buyer) price) ERR_INSUFFICIENT_BALANCE)
-    
-    (try! (ft-transfer? eco-reward-token price buyer seller))
+
+    (try! (ft-transfer? eco-reward-token royalty buyer original-recycler))
+    (try! (ft-transfer? eco-reward-token seller-amount buyer seller))
     (try! (nft-transfer? textile-batch batch-id seller buyer))
-    
-    (map-set marketplace-listings listing-id 
+
+    (map-set marketplace-listings listing-id
       (merge listing {active: false})
     )
-    
+
     (ok true)
   )
 )

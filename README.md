@@ -7,6 +7,7 @@ TextileToken is a blockchain-based smart contract system built on Stacks that cr
 - 🏷️ **Recycled Batch NFTs**: Create unique tokens representing batches of recycled textiles with origin tracking
 - 🌱 **Eco-Reward Tokens**: Earn fungible tokens for verified textile recycling activities
 - 🛒 **Sustainable Marketplace**: Buy and sell recycled textile batches using eco-tokens
+- 💰 **Batch Royalty System**: Automatic royalty payments to original recyclers on batch sales
 - 🎖️ **Compliance Badges**: Certify manufacturers using verified recycled materials
 - 📊 **Carbon Offset Tracking**: Calculate environmental impact of recycled textiles
 - 🔀 **Batch Splitting**: Divide large textile batches into smaller units for flexible management
@@ -66,6 +67,8 @@ clarinet test
 ```clarity
 (contract-call? .textile-token buy-batch u1)
 ```
+
+This purchases the listed batch, automatically distributing 5% of the sale price as royalty to the original recycler, with the remainder going to the seller.
 
 #### 2. Check Compliance Status
 ```clarity
@@ -146,7 +149,7 @@ This allows users to contribute their eco-tokens to support environmental initia
 - `register-recycler` - Register as certified recycler
 - `create-textile-batch` - Mint new batch NFT and earn tokens
 - `list-batch-for-sale` - Create marketplace listing
-- `buy-batch` - Purchase batch with eco-tokens
+- `buy-batch` - Purchase batch with eco-tokens, including automatic royalty distribution
 - `transfer-eco-tokens` - Send tokens to another user
 - `burn-eco-tokens` - Remove tokens from circulation
 - `split-batch` - Divide a textile batch into two smaller batches
@@ -164,6 +167,7 @@ This allows users to contribute their eco-tokens to support environmental initia
 - **Base Reward**: 10 tokens per kg of recycled textile
 - **Certification Bonus**: Additional 5 tokens per kg for certified batches
 - **Marketplace**: Use tokens to buy/sell recycled textile batches
+- **Royalty System**: 5% of sale price automatically paid to original recycler
 - **Merging Reward**: 10 tokens per kg for the total weight of merged batches
 
 ## 🛡️ Security Features
